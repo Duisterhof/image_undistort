@@ -31,12 +31,13 @@ Undistorter::Undistorter(
     for (size_t u = 0; u < resolution_out.width; ++u) {
       Eigen::Vector2d pixel_location(u, v);
       Eigen::Vector2d distorted_pixel_location;
+      std::shared_ptr<bool> is_valid;
       distortPixel(
           used_camera_parameters_pair_.getInputPtr()->K(),
           used_camera_parameters_pair_.getInputPtr()->R(),
           used_camera_parameters_pair_.getOutputPtr()->P(),
           used_camera_parameters_pair_.getInputPtr()->distortionModel(), D,
-          pixel_location, &distorted_pixel_location);
+          pixel_location, &distorted_pixel_location,is_valid);
 
       // Insert in map
       map_x_float.at<float>(v, u) =
@@ -79,7 +80,13 @@ void Undistorter::distortPixel(const Eigen::Matrix<double, 3, 3>& K_in,
                                const DistortionModel& distortion_model,
                                const std::vector<double>& D,
                                const Eigen::Vector2d& pixel_location,
-                               Eigen::Vector2d* distorted_pixel_location) {
+                               Eigen::Vector2d* distorted_pixel_location,
+                               std::shared_ptr<bool> is_valid
+                               )
+                              
+{
+  is_valid = std::make_shared<bool>(true); // is_valid returns if a point is considered valid, but it's not used for all models, so by default a point is valid
+
   Eigen::Vector3d pixel_location_3(pixel_location.x(), pixel_location.y(), 1.0);
 
   // Transform image coordinates to be size and focus independent
@@ -191,12 +198,37 @@ void Undistorter::distortPixel(const Eigen::Matrix<double, 3, 3>& K_in,
       // Split out parameters for easier reading
       const double& epsilon = D[0];
       const double& alpha = D[1];
+      double w_1(0.0),w_2(0.0);
 
       const double d1 = std::sqrt(x * x + y * y + 1.0);
-      const double d2 = std::sqrt(x * x + y * y + (epsilon*d1 + 1.0)*(epsilon*d1 + 1.0));
-      const double scaling = 1.0f/(alpha*d2 + (1-alpha)*(epsilon*d1+1.0));
-      xd = x * scaling;
-      yd = y * scaling;
+
+      if (alpha > 0.5 )
+      {
+        w_1 =(1.0-alpha)/alpha;
+      }
+      else
+      {
+        w_1 = alpha/(1.0-alpha);
+      }
+
+      w_2 = (w_1+epsilon)/(std::sqrt(2.0*w_1*epsilon+epsilon*epsilon+1.0));
+      // std::cout<<std::to_string(x) << std::endl ;
+      // std::cout << std::to_string(-w_2*d1) << std::endl;
+      if (1.0 > -w_2*d1)
+      {
+        const double d2 = std::sqrt(x * x + y * y + (epsilon*d1 + 1.0)*(epsilon*d1 + 1.0));
+        const double scaling = 1.0f/(alpha*d2 + (1-alpha)*(epsilon*d1+1.0));
+        xd = x * scaling;
+        yd = y * scaling;
+      }
+      else
+      {
+        xd = x;
+        yd = y;
+        is_valid = std::make_shared<bool>(false);
+        std::cout << "not valid" << std::endl;
+      }
+
     } break;
     case DistortionModel::UNIFIED: {
       // Split out parameters for easier reading

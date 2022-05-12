@@ -24,7 +24,9 @@ class Undistorter {
                            const DistortionModel& distortion_model,
                            const std::vector<double>& D,
                            const Eigen::Vector2d& pixel_location,
-                           Eigen::Vector2d* distorted_pixel_location);
+                           Eigen::Vector2d* distorted_pixel_location,
+                           std::shared_ptr<bool> is_valid
+                           );
 
  private:
   const CameraParametersPair used_camera_parameters_pair_;

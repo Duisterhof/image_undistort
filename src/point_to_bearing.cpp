@@ -109,10 +109,13 @@ double PointToBearing::bearingProjectionError(const std::vector<double>& values,
   P_bearing.topRightCorner<3, 1>() = Eigen::Vector3d::Zero();
 
   Eigen::Vector2d estimated_distorted_pixel_location;
+  std::shared_ptr<bool> is_valid;
   Undistorter::distortPixel(camera_parameters.K(), camera_parameters.R(),
                             P_bearing, camera_parameters.distortionModel(),
                             camera_parameters.D(), pixel_location,
-                            &estimated_distorted_pixel_location);
+                            &estimated_distorted_pixel_location,
+                            is_valid
+                            );
 
   return (estimated_distorted_pixel_location - distorted_pixel_location).norm();
 }

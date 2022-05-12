@@ -428,18 +428,15 @@ bool CameraParametersPair::setOptimalOutputCameraParameters(
     double max_y = 0;
     for (Eigen::Vector2d pixel_location : pixel_locations) {
       Eigen::Vector2d distorted_pixel_location;
+      std::shared_ptr<bool> is_valid(new bool((true)));
       Undistorter::distortPixel(input_ptr_->K(), input_ptr_->R(), P,
                                 input_ptr_->distortionModel(), D,
-                                pixel_location, &distorted_pixel_location);
-
-      max_x = std::max(
-          max_x,
-          std::abs(static_cast<double>(input_ptr_->resolution().width) / 2.0 -
-                   distorted_pixel_location.x()));
-      max_y = std::max(
-          max_y,
-          std::abs(static_cast<double>(input_ptr_->resolution().height) / 2.0 -
-                   distorted_pixel_location.y()));
+                                pixel_location, &distorted_pixel_location,is_valid);
+      if (*is_valid == true)
+      {
+          max_x = std::max(max_x, std::abs(static_cast<double>(input_ptr_->resolution().width) / 2.0 - distorted_pixel_location.x()));
+          max_y = std::max(max_y, std::abs(static_cast<double>(input_ptr_->resolution().height) / 2.0 - distorted_pixel_location.y()));
+      }
     }
 
     // change resolution estimate so that extreme points lie on edges (under
